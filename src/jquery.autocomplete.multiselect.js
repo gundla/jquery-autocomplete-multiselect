@@ -2,7 +2,8 @@
 
 $.widget("ui.autocomplete", $.ui.autocomplete, {
     options : $.extend({}, this.options, {
-        multiselect: false
+        multiselect: false,
+        maxselection: 5 /*by default maxselection is set to 5*/
     }),
     _create: function(){
         this._super();
@@ -12,7 +13,6 @@ $.widget("ui.autocomplete", $.ui.autocomplete, {
 
         if (o.multiselect) {
             console.log('multiselect true');
-
             self.selectedItems = {};           
             self.multiselect = $("<div></div>")
                 .addClass("ui-autocomplete-multiselect ui-state-default ui-widget")
@@ -36,6 +36,7 @@ $.widget("ui.autocomplete", $.ui.autocomplete, {
                     if ((this.value === "") && (e.keyCode == kc.BACKSPACE)) {
                         var prev = self.element.prev();
                         delete self.selectedItems[prev.text()];
+                        o.maxselection++; //we increase the count if a previous selected item is deleted by backspace key
                         prev.remove();
                     }
                 },
@@ -48,32 +49,37 @@ $.widget("ui.autocomplete", $.ui.autocomplete, {
 
             // TODO: There's a better way?
             o.select = o.select || function(e, ui) {
-                $("<div></div>")
-                    .addClass("ui-autocomplete-multiselect-item")
-                    .text(ui.item.label)
-                    .append(
-                        $("<span></span>")
-                            .addClass("ui-icon ui-icon-close")
-                            .click(function(){
-                                var item = $(this).parent();
-                                delete self.selectedItems[item.text()];
-                                item.remove();
-                            })
-                    )
-                    .insertBefore(self.element);
-                
+                if(!(ui.item.label in self.selectedItems) && o.maxselection > 0){ //comparing with maxselection count
+                    o.maxselection--;//we decrease the count once an item is selected
+                    $("<div></div>")
+                        .addClass("ui-autocomplete-multiselect-item")
+                        .text(ui.item.label)
+                        .append(
+                            $("<span></span>")
+                                .addClass("ui-icon ui-icon-close")
+                                .click(function(){
+                                    o.maxselection++;//we increase the count if a previous selected item is deleted by cross icon click
+                                    var item = $(this).parent();
+                                    delete self.selectedItems[item.text()];
+                                    item.remove();
+                                })
+                        )
+                        .insertBefore(self.element);
+                }
+                else if(o.maxselection <= 0)
+                {
+                    alert("max selected done");//Inform the user that maximum number has been selected
+                }
                 self.selectedItems[ui.item.label] = ui.item;
                 self._value("");
-                return false;
+                 return false;
             }
-
             /*self.options.open = function(e, ui) {
                 var pos = self.multiselect.position();
                 pos.top += self.multiselect.height();
                 self.menu.element.position(pos);
             }*/
         }
-
         return this;
     }
 });
